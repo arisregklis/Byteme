@@ -135,7 +135,7 @@ JSON -> { "applied": true, "floors": 60, "elevators": 5 }
  { "elevator_id" : "C, "floor" : 3 , "direction": "UP" , "status" : "MOVING" , "next_stops" : [5,9] }
  
  
-<<<<<<< Updated upstream
+in<<<<<<< Updated upstream
  
  ### 3.2 Post /stops : Νέα στάση
   
