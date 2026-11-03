@@ -278,6 +278,13 @@ elevator_id (π.χ. "C"): Το γράμμα του ασανσέρ που πρέ�
 - max_wait_seconds: Τον μεγαλύτερο χρόνο αναμονής
 - avg_travel_seconds: Τον μέσο χρόνο διαδρομής
 - floors_travelled: Τα συνολικά πατώματα που διανύθηκαν
+Παραδειγμα JSON
+{
+  "run_id": 1, "state": "FINISHED",
+  "requests_sent": 50, "requests_served": 50, "requests_failed":0,
+  "avg_wait_seconds": 18.4, "max_wait_seconds": 61.0,
+  "avg_travel_seconds": 24.7, "floors_travelled": 412
+}
 Αν το run_id δεν υπάρχει εμφανίζεται σφάλμα 404 (Not Found) που σημαίνει ότι δεν βρέθηκε η συγκεκριμένη εκτέλεση
 ### 5.4 Ορισμός μετρικών
 - Χρόνος αναμονής: Ο χρόνος από τη στιγμή που στέλνεται το POST/requests μέχρι το γεγονός ARRIVED του ασανσέρ που ανέλαβε στον όροφο where_from
