@@ -97,40 +97,45 @@
 
  Μορφή JSON 
  { "elevator_id" : "C, "floor" : 3 , "direction": "UP" , "status" : "MOVING" , "next_stops" : [5,9] }
+ 
+ 
+ 
  ### 3.2 Post /stops : Νέα στάση
-- Καλείται : Το κεντρικό --> Ανελκυστήρας
-- URL:  http://localhost:3001/stops
+  
+  Καλείται : Το κεντρικό --> Ανελκυστήρας
+  URL:  http://localhost:3001/stops
 
-- Σκοπός : Το κεντρικό δίνει στον ανελκυστήρα σε ποιον όροφο πρέπει να παέι . Αν ο όροφος υπάρχει ήδη στη λίστα , δεν προστίθεται ξανά.
+  Σκοπός : Το κεντρικό δίνει στον ανελκυστήρα σε ποιον όροφο πρέπει να παέι . Αν ο όροφος υπάρχει ήδη στη λίστα , δεν προστίθεται ξανά.
 
-- Request:
-floor: όροφος στάσης, από 0 έως N-1
-type: τύπος στάσης , PICKUP ή DROPOFF
+  Request:
+ floor: όροφος στάσης, από 0 έως N-1
+ type: τύπος στάσης , PICKUP ή DROPOFF
 
-- Response 200:
-accepted : αν η στάση έγινε δεκτή (true/false)
-next_stops : η νέα λίστα με τις στάσεις
+  Response 200:
+ accepted : αν η στάση έγινε δεκτή (true/false)
+ next_stops : η νέα λίστα με τις στάσεις
 
-- Παράδειγμα Request:
-json
-{ “floor”: 7, “type”: “DROPOFF” }
+  Παράδειγμα Request:
+ json
+ { “floor”: 7, “type”: “DROPOFF” }
 
-- Παράδειγμα Response 200:
-json
-{ “accepted”: true, “next_stops”: [5, 7] }
+  Παράδειγμα Response 200:
+ json
+ { “accepted”: true, “next_stops”: [5, 7] }
 
-- Λάθη:
+  Λάθη:
 
-Κωδικός Παράδειγμα σώματος Πότε400
+  Κωδικός Παράδειγμα σώματος Πότε400
 
-{ “error”: “floor out of range” }
-όροφος εκτός ορίων400
+ { “error”: “floor out of range” }
+ όροφος εκτός ορίων400
 
-{ “error”: “type must be PICKUP or DROPOFF” }
-άγνωστος τύπος409
+ { “error”: “type must be PICKUP or DROPOFF” }
+ άγνωστος τύπος409
 
-{ “error”: “elevator is stopped” }
-ο ανελκυστήρας είναι σε κατάσταση STOPPED
+ { “error”: “elevator is stopped” }
+ ο ανελκυστήρας είναι σε κατάσταση STOPPED
+ 
  
  ## 4. Πληκτρολόγιο Χρήστη 
 - Κάθε όροφος του κτηρίου διαθέτει ένα πληκτρολόγιο, δηλαδή μία οθόνη με κάποια κουμπιά (ίσως).
