@@ -1,5 +1,5 @@
 package gr.aueb.byteme.common;
-
+// Επιβάτης κάνει αίτημα να πάει απο τον όροφο sourceFloor στον όροφο destinationFloor
 public class Request {
     private int sourceFloor;
     private int destinationFloor;
