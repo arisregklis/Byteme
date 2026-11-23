@@ -1,14 +1,19 @@
 package gr.aueb.byteme.common;
-public class Request {
-    private final int whereFrom;
-    private final int whereTo;
 
-    public Request( int whereFrom,  int whereTo) {
-        if (whereFrom < 0 || whereTo < 0) {
-            throw new InvalidDataException("whereFrom and whereTo must be non-negative");
-        }
-        if (whereFrom == whereTo) {
-            throw new InvalidDataException("whereFrom and whereTo must be different");
-        }
+public class Request {
+    private int sourceFloor;
+    private int destinationFloor;
+
+    public Request(int sourceFloor, int destinationFloor) {
+        this.sourceFloor = sourceFloor;
+        this.destinationFloor = destinationFloor;
+    }
+
+    public int getSourceFloor() {
+        return sourceFloor;
+    }
+
+    public int getDestinationFloor() {
+        return destinationFloor;
     }
 }
