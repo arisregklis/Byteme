@@ -39,7 +39,7 @@
 ## 3. Καταστάσεις λειτουργίας
 
 ```java
-public enum ElevatorStatus {
+public interface ElevatorStatus {
     IDLE,
     MOVING,
     DOORS_OPEN,
@@ -73,7 +73,7 @@ public enum ElevatorStatus {
 ## 4. Καταστάσεις θυρών
 
 ```java
-public enum DoorState {
+public interface DoorState {
     OPEN,
     OPENING,
     CLOSING,
@@ -96,7 +96,7 @@ doorState == DoorState.CLOSED_AND_LOCKED
 ## 5. Καταστάσεις κινητήρα και φρένου
 
 ```java
-public enum MotorState {
+public interface MotorState {
     STOPPED,
     MOVING_UP,
     MOVING_DOWN,
@@ -106,7 +106,7 @@ public enum MotorState {
 ```
 
 ```java
-public enum BrakeState {
+public interface BrakeState {
     ENGAGED,
     RELEASED,
     FAULT
