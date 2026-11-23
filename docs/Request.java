@@ -5,8 +5,8 @@ public class Request {
     private int destinationFloor;
 
     public Request(int sourceFloor, int destinationFloor) {
-        this.sourceFloor = sourceFloor;
-        this.destinationFloor = destinationFloor;
+    this.sourceFloor = sourceFloor;
+    this.destinationFloor = destinationFloor;
     }
 
     public int getSourceFloor() {
@@ -17,3 +17,4 @@ public class Request {
         return destinationFloor;
     }
 }
+
