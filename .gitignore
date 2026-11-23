@@ -1,0 +1,11 @@
+# Maven generated files
+target/
+
+# Visual Studio Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Java
+*.class
