@@ -16,12 +16,10 @@ import java.io.IOException;
 //
 // Αρχική έκδοση (API.md §5.4): οι χρόνοι αναμονής/διαδρομής είναι σταθερά 0,
 // και "completed" = όσα αιτήματα δέχτηκε το κεντρικό με 202.
-
-
 public class EvaluationApi implements HttpHandler {
     private String centralUrl;
     private int floors;
-    private Scenario scenario = new UniformScenario(); //για νέο σενάριο: νέα κλάση που κάνει implements Scenario
+    private Scenario scenario = new UniformScenario();   // για νέο σενάριο: νέα κλάση που κάνει implements Scenario
     private Http http = new Http();
 
     private String[] allowedEvents = {
@@ -29,15 +27,16 @@ public class EvaluationApi implements HttpHandler {
         "DOORS_CLOSED", "TRIP_COMPLETED", "OVERLOAD_DETECTED", "STOPPED", "RESUMED",
         "FAULT_DETECTED", "EMERGENCY_ACTIVATED"
     };
+
     // γεγονότα που έχουμε δει (για να μη μετρήσουμε το ίδιο event_id δύο φορές)
     private String[] eventIds = new String[10000];
     private int eventCount = 0;
 
     // σενάρια που έτρεξαν: η θέση i σε κάθε πίνακα είναι το ίδιο σενάριο
-    private String [] runIds = new String[100];
-    private String [] runStatus = new String[100];
-    private int [] runCompleted = new int[100];
-    private int [] runFailed = new int[100];
+    private String[] runIds = new String[100];
+    private String[] runStatus = new String[100];
+    private int[] runCompleted = new int[100];
+    private int[] runFailed = new int[100];
     private int runCount = 0;
 
     public EvaluationApi(String centralUrl, int floors) {
@@ -48,8 +47,8 @@ public class EvaluationApi implements HttpHandler {
     public void handle(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
 
-       try{
-         if (path.equals("/events")) {
+        try {
+            if (path.equals("/events")) {
                 if (isMethod(exchange, "POST")) {
                     newEvent(exchange);
                 }
@@ -71,15 +70,16 @@ public class EvaluationApi implements HttpHandler {
             http.sendError(exchange, 500, "INTERNAL_ERROR", e.getMessage());
         }
     }
-    }
-     // POST /events  (API.md §5.1)
+
+    // POST /events  (API.md §5.1)
     // synchronized = ένα event τη φορά, για να μη γράψουν δύο ταυτόχρονα στην ίδια θέση του πίνακα.
     private synchronized void newEvent(HttpExchange exchange) throws IOException {
         Json body = new Json(http.readBody(exchange));
         String eventId = body.getString("event_id");
         String elevatorId = body.getString("elevator_id");
         String eventType = body.getString("event_type");
-         if (!isAllowedEvent(eventType)) {
+
+        if (!isAllowedEvent(eventType)) {
             http.sendError(exchange, 400, "INVALID_EVENT_TYPE", "unknown event_type " + eventType);
             return;
         }
@@ -93,6 +93,7 @@ public class EvaluationApi implements HttpHandler {
         }
         http.sendJson(exchange, 200, "{\"accepted\": true}");
     }
+
     // POST /runs  (API.md §5.2)   {"scenario": "uniform", "seed": 12345, "passengers": 10}
     private void newRun(HttpExchange exchange) throws IOException {
         Json body = new Json(http.readBody(exchange));
@@ -113,7 +114,8 @@ public class EvaluationApi implements HttpHandler {
             http.sendError(exchange, 400, "INVALID_PASSENGERS", "passengers must be between 1 and 1000");
             return;
         }
-         // 1. Νέο run και απάντηση 202
+
+        // 1. Νέο run και απάντηση 202
         int index = runCount;
         runCount++;
         String runId = "run-" + runCount;
@@ -141,7 +143,8 @@ public class EvaluationApi implements HttpHandler {
         runStatus[index] = "COMPLETED";
         System.out.println(runId + ": " + runCompleted[index] + " δεκτά, " + runFailed[index] + " απέτυχαν");
     }
-     // GET /results/{run_id}  (API.md §5.3)
+
+    // GET /results/{run_id}  (API.md §5.3)
     private void results(HttpExchange exchange, String runId) throws IOException {
         for (int i = 0; i < runCount; i++) {
             if (runIds[i].equals(runId)) {
@@ -156,6 +159,7 @@ public class EvaluationApi implements HttpHandler {
         }
         http.sendError(exchange, 404, "UNKNOWN_RUN", "unknown run_id " + runId);
     }
+
     private boolean isAllowedEvent(String eventType) {
         for (int i = 0; i < allowedEvents.length; i++) {
             if (allowedEvents[i].equals(eventType)) {
@@ -182,5 +186,3 @@ public class EvaluationApi implements HttpHandler {
         return false;
     }
 }
-
-
