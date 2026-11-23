@@ -1,201 +1,106 @@
+
 # Πληκτρολόγιο Χρήστη (Kiosk) — Σχεδιασμός & Λογική
 
 ## 1. Σκοπός
 
 Το Πληκτρολόγιο Χρήστη βρίσκεται στον όροφο και λειτουργεί ως σημείο επαφής του χρήστη με το σύστημα.
-Παίρνει τον όροφο προορισμού, τον ελέγχει, ετοιμάζει/στέλνει το αίτημα στο Κεντρικό Σύστημα και εμφανίζει ποιο ασανσέρ αντιστοιχίστηκε ή ποιο σφάλμα προέκυψε.
+Παίρνει τον όροφο προορισμού από το πληκτρολόγιο, τον ελέγχει, φτιάχνει το αίτημα για το Κεντρικό Σύστημα (`POST /requests`) και δέχεται την ανάθεση ανελκυστήρα από το Κεντρικό Σύστημα (`POST /display`).
 
 Ο βασικός κανόνας είναι:
 
-> Αν η είσοδος του χρήστη ή το μήνυμα της οθόνης δεν είναι έγκυρο, δεν προχωράει κανονική ενέργεια και επιστρέφεται σφάλμα.
+> Αν η είσοδος του χρήστη, το αίτημα ή το μήνυμα της οθόνης δεν είναι έγκυρο (ή αφορά άγνωστο `request_id`), δεν προχωράει κανονική ενέργεια και επιστρέφεται το αντίστοιχο σφάλμα.
 
 ---
 
-## 2. Λειτουργίες που θα υλοποιήσουμε
+## 2. Αρχιτεκτονική & Αρχεία (`gr.aueb.byteme.kiosk`)
 
-1. Έλεγχος έγκυρου ορόφου προορισμού (`isValidDestination`).
-2. Δημιουργία αιτήματος κλήσης ανελκυστήρα (`buildRequestPayload`).
-3. Αποστολή αιτήματος στο Κεντρικό Σύστημα (`sendRequest`).
-4. Διαχείριση απαντήσεων (`handleServerResponse` για `200`, `400`, `503`).
-5. Έλεγχος και εμφάνιση ενημέρωσης οθόνης (`formatDisplayMessage` με `elevator_id` από `A` έως `T`).
-6. Καταγραφή τρέχουσας κατάστασης και τελευταίου μηνύματος (`getStatus`, `getLastMessage`).
+Η υλοποίηση του kiosk χωρίζεται σε τέσσερα αρχεία στο πακέτο `gr.aueb.byteme.kiosk`:
 
----
-
-## 3. Καταστάσεις λειτουργίας
-
-Στη βασική έκδοση κρατάμε την κατάσταση ως απλό κείμενο (`String`):
-
-- `"IDLE"`: Αναμένει επιλογή ορόφου από τον χρήστη.
-- `"SENDING_REQUEST"`: Στέλνει το αίτημα στο Κεντρικό Σύστημα.
-- `"DISPLAYING_ASSIGNMENT"`: Εμφανίζει στην οθόνη ποιο ασανσέρ αντιστοιχίστηκε.
-- `"INVALID_INPUT"`: Δόθηκε άκυρος όροφος ή άκυρο μήνυμα οθόνης.
-- `"UNAVAILABLE"`: Το σύστημα δεν είναι διαθέσιμο (`503` ή σφάλμα σύνδεσης).
+1. **`KioskActions.java`**: Η διεπαφή (`interface`) με τις βασικές πράξεις του kiosk (`isValidDestination`, `buildRequestPayload`, `isKnownRequest`, `formatDisplayMessage`, `getStatus`).
+2. **`KioskController.java`**: Υλοποιεί το `KioskActions` με απλή λογική, πίνακα καταγεγραμμένων αιτημάτων (`sentRequestIds` / `sentCount`) και κατάσταση ως `String`. Δεν περιέχει κώδικα HTTP.
+3. **`KioskApi.java`**: Υλοποιεί `HttpHandler` και εκθέτει το endpoint `POST /display` για να ενημερώνει το kiosk ποιος ανελκυστήρας αντιστοιχίστηκε.
+4. **`KioskMain.java`**: Το σημείο εκκίνησης (`main`) που σηκώνει τον HTTP server για το `/display`, διαβάζει εισόδους από το πληκτρολόγιο και στέλνει `POST /requests` στο Κεντρικό Σύστημα.
 
 ---
 
-## 4. Κανόνες ελέγχου ορόφου
+## 3. Καταστάσεις λειτουργίας (`String`)
 
-Ο όροφος προορισμού επιτρέπεται μόνο όταν:
+Στον `KioskController` η κατάσταση κρατιέται ως απλό `String`:
+
+- `"IDLE"`: Αρχική κατάσταση αναμονής.
+- `"WAITING_FOR_ELEVATOR"`: Έχει δημιουργηθεί έγκυρο payload αιτήματος και αναμένεται ανάθεση ανελκυστήρα.
+- `"DISPLAYING_ASSIGNMENT"`: Εμφανίστηκε / μορφοποιήθηκε έγκυρο μήνυμα ανάθεσης ανελκυστήρα.
+- `"INVALID_INPUT"`: Δόθηκε άκυρο `request_id`, άκυρος όροφος προορισμού ή άκυρο `elevator_id`.
+
+---
+
+## 4. Κανόνες ελέγχου ορόφου & αιτήματος
+
+Ο όροφος προορισμού (`destinationFloor`) είναι έγκυρος όταν:
 
 ```text
 destinationFloor >= 0
 destinationFloor < totalFloors
 destinationFloor != currentFloor
-Αν ο όροφος είναι εκτός ορίων ή ίδιος με τον τρέχοντα όροφο:
+Στο buildRequestPayload(requestId, destinationFloor, callbackUrl):
 
-Δεν δημιουργείται έγκυρο αίτημα κίνησης.
+Αν το requestId είναι null ή κενό (""), η κατάσταση γίνεται "INVALID_INPUT" και πετάει IllegalArgumentException.
 
-Η κατάσταση γίνεται "INVALID_INPUT".
+Αν ο destinationFloor δεν είναι έγκυρος, η κατάσταση γίνεται "INVALID_INPUT" και πετάει IllegalArgumentException.
 
-Επιστρέφεται / καταγράφεται σφάλμα (400 Bad Request).
+Αν είναι έγκυρος, αποθηκεύει το requestId στα γνωστά αιτήματα, θέτει κατάσταση "WAITING_FOR_ELEVATOR" και επιστρέφει JSON.
 
-5. Κλάση και όλες οι μέθοδοι Πληκτρολογίου
-Java
-public class KioskController {
-
-    private final int currentFloor;
-    private final int totalFloors;
-    private String status = "IDLE";
-    private String lastMessage = "";
-
-    public KioskController(int currentFloor, int totalFloors) {
-        if (totalFloors < 3 || totalFloors > 200) {
-            throw new IllegalArgumentException("Invalid total floors");
-        }
-        if (currentFloor < 0 || currentFloor >= totalFloors) {
-            throw new IllegalArgumentException("Invalid current floor");
-        }
-        this.currentFloor = currentFloor;
-        this.totalFloors = totalFloors;
-    }
-
-    public boolean isValidDestination(int destinationFloor) {
-        if (destinationFloor < 0 || destinationFloor >= totalFloors) {
-            return false;
-        }
-        if (destinationFloor == currentFloor) {
-            return false;
-        }
-        return true;
-    }
-
-    public String buildRequestPayload(int destinationFloor) {
-        if (!isValidDestination(destinationFloor)) {
-            status = "INVALID_INPUT";
-            lastMessage = "400: Invalid destination floor";
-            throw new IllegalArgumentException("400: Invalid destination floor");
-        }
-        status = "SENDING_REQUEST";
-        lastMessage = "Prepared request for floor " + destinationFloor;
-        return "{\"where_from\":" + currentFloor + ",\"where_to\":" + destinationFloor + "}";
-    }
-
-    public String handleServerResponse(int statusCode, String responseBody) {
-        if (statusCode == 200) {
-            status = "DISPLAYING_ASSIGNMENT";
-            lastMessage = "Assigned: " + responseBody;
-            return lastMessage;
-        }
-        if (statusCode == 400) {
-            status = "INVALID_INPUT";
-            lastMessage = "400 Bad Request: " + responseBody;
-            return lastMessage;
-        }
-        if (statusCode == 503) {
-            status = "UNAVAILABLE";
-            lastMessage = "503 Service Unavailable: " + responseBody;
-            return lastMessage;
-        }
-        status = "UNAVAILABLE";
-        lastMessage = "Unexpected status " + statusCode + ": " + responseBody;
-        return lastMessage;
-    }
-
-    public String sendRequest(int destinationFloor) {
-        String payload = buildRequestPayload(destinationFloor);
-        // Εδώ θα συνδεθεί η πραγματική κλήση HTTP POST /requests προς το Κεντρικό Σύστημα
-        lastMessage = "Sent payload: " + payload;
-        return payload;
-    }
-
-    public String formatDisplayMessage(String requestId, String elevatorId) {
-        if (requestId == null || requestId.isBlank()) {
-            status = "INVALID_INPUT";
-            lastMessage = "400: Missing request_id";
-            throw new IllegalArgumentException("400: Missing request_id");
-        }
-        if (elevatorId == null || elevatorId.length() != 1
-                || elevatorId.charAt(0) < 'A' || elevatorId.charAt(0) > 'T') {
-            status = "INVALID_INPUT";
-            lastMessage = "400: Invalid elevator_id";
-            throw new IllegalArgumentException("400: Invalid elevator_id");
-        }
-        status = "DISPLAYING_ASSIGNMENT";
-        lastMessage = "Request " + requestId + " -> Elevator " + elevatorId;
-        return lastMessage;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public String getLastMessage() {
-        return lastMessage;
-    }
+5. Μορφή JSON αιτήματος και endpoints
+Αίτημα προς το Κεντρικό Σύστημα (POST /requests)
+JSON
+{
+  "request_id": "req-2-1",
+  "source_floor": 2,
+  "destination_floor": 7,
+  "callback_url": "http://localhost:3100/display"
 }
-6. Μορφή αιτήματος και απαντήσεων
-Αίτημα προς το Κεντρικό Σύστημα:
+Στο KioskMain, το κεντρικό σύστημα αναμένεται να απαντήσει 202 σε επιτυχημένη αποστολή, ενώ σε σφάλμα διαβάζεται το πεδίο "message" (αν υπάρχει) ή εμφανίζεται μήνυμα μη διαθεσιμότητας αν δεν απαντά.
+
+Ενημέρωση οθόνης (POST /display)
+Το Κεντρικό Σύστημα καλεί POST /display με σώμα:
 
 JSON
 {
-  "where_from": 2,
-  "where_to": 7
+  "request_id": "req-2-1",
+  "elevator_id": "C"
 }
-Απαντήσεις που διαχειρίζεται το handleServerResponse:
+Στο KioskApi:
 
-200 OK: Το αίτημα έγινε δεκτό και η κατάσταση γίνεται "DISPLAYING_ASSIGNMENT".
+Λάθος path -> 404 (NOT_FOUND).
 
-400 Bad Request: Άκυρος όροφος ή άκυρα δεδομένα και η κατάσταση γίνεται "INVALID_INPUT".
+Λάθος μέθοδος (όχι POST) -> 405 (METHOD_NOT_ALLOWED).
 
-503 Service Unavailable: Το σύστημα δεν είναι διαθέσιμο και η κατάσταση γίνεται "UNAVAILABLE".
+Άγνωστο request_id (!kiosk.isKnownRequest(requestId)) -> 404 (UNKNOWN_REQUEST).
 
-7. Ενημέρωση οθόνης ορόφου
-Όταν έρχεται αντιστοίχιση ανελκυστήρα στο formatDisplayMessage:
+Άκυρο elevator_id (όχι ένα γράμμα από 'A' έως 'T') -> IllegalArgumentException -> 400 (BAD_REQUEST) και κατάσταση "INVALID_INPUT".
 
-Java
-if (elevatorId == null || elevatorId.length() != 1
-        || elevatorId.charAt(0) < 'A' || elevatorId.charAt(0) > 'T') {
-    status = "INVALID_INPUT";
-} else {
-    status = "DISPLAYING_ASSIGNMENT";
-}
-Αν το elevatorId δεν είναι ένα γράμμα από το A έως το T, το μήνυμα απορρίπτεται.
+Έγκυρο elevator_id -> επιστρέφει το μήνυμα "Χρησιμοποιήστε τον ανελκυστήρα " + elevatorId, θέτει κατάσταση "DISPLAYING_ASSIGNMENT" και απαντά 200 με {"shown": true}.
 
-8. Απαραίτητα tests
-Έγκυρος προορισμός (isValidDestination, buildRequestPayload, sendRequest) φτιάχνει σωστά το JSON (where_from, where_to).
+6. Εκκίνηση (KioskMain)
+Παράδειγμα εκκίνησης:
 
-Άκυρος προορισμός (εκτός ορίων ή ίδιος όροφος) ρίχνει σφάλμα και αλλάζει κατάσταση σε "INVALID_INPUT".
+Plaintext
+--floor 2 --port 3100 --central-url http://localhost:3000 --floors 10
+Το --floor είναι υποχρεωτικό (0 έως totalFloors - 1).
 
-Διαχείριση απαντήσεων 200, 400, 503 από το handleServerResponse ενημερώνει σωστά την κατάσταση ("DISPLAYING_ASSIGNMENT", "INVALID_INPUT", "UNAVAILABLE").
+Το --port έχει προεπιλογή 3100.
 
-Έγκυρο elevatorId (A–T) στο formatDisplayMessage επιστρέφει σωστό μήνυμα οθόνης, ενώ άκυρο (π.χ. Z ή κενό requestId) απορρίπτεται.
+Το --central-url έχει προεπιλογή http://localhost:3000.
 
-9. Προτεραιότητες υλοποίησης
-Πρώτη προτεραιότητα
-Καταστάσεις με String (status, lastMessage).
+Το --floors έχει προεπιλογή 10.
 
-Έλεγχος έγκυρου ορόφου (isValidDestination).
+7. Βασικά Tests (KioskControllerTest)
+Έγκυρος προορισμός (isValidDestination) επιστρέφει true μόνο για ορόφους εντός [0, totalFloors - 1) διαφορετικούς από currentFloor.
 
-Δημιουργία αιτήματος (buildRequestPayload).
+buildRequestPayload δημιουργεί σωστό JSON με request_id, source_floor, destination_floor, callback_url, καταχωρεί το requestId και αλλάζει κατάσταση σε "WAITING_FOR_ELEVATOR".
 
-Διαχείριση απαντήσεων (handleServerResponse).
+Άκυρος προορισμός ή άκυρο requestId στο buildRequestPayload πετάει IllegalArgumentException και θέτει κατάσταση "INVALID_INPUT".
 
-Έλεγχος μηνύματος οθόνης (formatDisplayMessage).
+isKnownRequest επιστρέφει true μόνο για requestId που έχουν ήδη περάσει από buildRequestPayload.
 
-Βασικά unit tests.
-
-Δεύτερη προτεραιότητα
-Πλήρης αποστολή HTTP στο sendRequest προς τα endpoints του Κεντρικού Συστήματος.
-
-Πλήρης ενσωμάτωση με την οθόνη και τις υπόλοιπες ομάδες
+formatDisplayMessage με έγκυρο elevatorId (A–T) επιστρέφει "Χρησιμοποιήστε τον ανελκυστήρα <id>" και θέτει κατάσταση "DISPLAYING_ASSIGNMENT", ενώ με άκυρο elevatorId πετάει IllegalArgumentException και θέτει "INVALID_INPUT".
