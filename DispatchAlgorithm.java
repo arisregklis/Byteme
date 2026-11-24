@@ -1,8 +1,9 @@
 package gr.aueb.byteme.central;
-import docs.ElevatorState;
+
 import gr.aueb.byteme.common.Request;
-// Η διεπαφή του αλγορίθμου: παίρνει ανελκυστήρες και αίτημα, δίενι γράμμα.
+
+// Η διεπαφή του αλγορίθμου: παίρνει ανελκυστήρες και αίτημα, δίνει γράμμα.
 public interface DispatchAlgorithm {
-    //επιστρέφει το γράμμα του ανελκυστήρα ή nullαν δεν υπάρχει διαθέσιμος (503)
+    // επιστρέφει το γράμμα του ανελκυστήρα ή null αν δεν υπάρχει διαθέσιμος (503)
     String chooseElevator(ElevatorState[] states, Request request);
 }
