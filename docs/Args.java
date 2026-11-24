@@ -15,4 +15,15 @@ public class Args {
     }
     return defaultvalue;
     }
+    public int getInt(String name, int defaultvalue) {
+        String value = getString(name, null);
+        if (value == null) {
+            return defaultvalue;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(name + " must be a number, not " + value);
+        }
+    }
 }
