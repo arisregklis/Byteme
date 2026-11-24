@@ -1,0 +1,116 @@
+@startuml
+allowmixing
+
+title Σύστημα Έξυπνων Ανελκυστήρων\nΠαρούσα και προγραμματισμένη κατάσταση
+
+top to bottom direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam componentStyle rectangle
+
+legend right
+  |= Χρώμα |= Κατάσταση |
+  |<#D5F5E3>| Υλοποιημένο |
+  |<#D6EAF8>| Υλοποιημένο σε branch / PR |
+  |<#E5E7E9>| Προγραμματισμένο |
+endlegend
+
+package "Παρούσα κατάσταση" {
+
+    package "Kiosk" #D5F5E3 {
+        class KioskController
+        class Request
+        class InvalidDataException
+
+        KioskController --> Request : δημιουργεί
+        KioskController ..> InvalidDataException : διαχειρίζεται
+    }
+
+    package "Evaluation System" #D6EAF8 {
+        interface EvaluationService {
+            + recordEvent(...)
+            + recordMetric(...)
+            + getTotalEvents() : int
+            + getTotalMetrics() : int
+        }
+
+        class SimpleEvaluationService {
+            - MAX_CAPACITY : int = 8
+            - totalEvents : int
+            - totalMetrics : int
+        }
+
+        class EvaluationHttpServer {
+            - server
+            - evaluationService
+            - objectMapper
+            + start()
+            + stop()
+        }
+
+        class EvaluationMain {
+            - PORT : int = 7003
+            + main(args)
+        }
+
+        class EvaluationEvent {
+            + elevatorId : String
+            + timestamp : long
+            + eventType : String
+            + floor : Integer
+        }
+
+        class EvaluationMetric {
+            + elevatorId : String
+            + metricName : String
+            + value : Double
+            + passengersOnboard : Integer
+        }
+
+        class CapacityExceededException
+
+        SimpleEvaluationService ..|> EvaluationService : υλοποιεί
+        EvaluationMain --> SimpleEvaluationService : δημιουργεί
+        EvaluationMain --> EvaluationHttpServer : ξεκινά
+        EvaluationHttpServer --> EvaluationService : χρησιμοποιεί
+        EvaluationHttpServer ..> EvaluationEvent : διαβάζει JSON
+        EvaluationHttpServer ..> EvaluationMetric : διαβάζει JSON
+        SimpleEvaluationService ..> CapacityExceededException : ρίχνει
+    }
+}
+
+package "Προγραμματισμένη ενοποίηση" #E5E7E9 {
+
+    component "Kiosk REST Client" as KioskREST
+    component "Central System\nPort 7001" as Central
+    component "Elevator Controller\nPort 7002" as Elevator
+    component "Evaluation REST API\nPort 7003" as EvaluationAPI
+    component "Motor / Doors / Display" as Hardware
+   
+   KioskREST ..> Central : POST /api/central/request
+
+    Central ..> Elevator : POST /api/elevator/{id}/stop
+
+    Central ..> Elevator : GET /api/elevator/{id}/status
+
+    Elevator ..> EvaluationAPI : POST /api/evaluation/events
+
+    Elevator ..> EvaluationAPI : POST /api/evaluation/metrics
+
+    Elevator ..> Hardware : REST εντολές κίνησης και θυρών
+    
+}
+
+note right of EvaluationHttpServer
+  Λειτουργικά endpoints:
+  POST /api/evaluation/events
+  POST /api/evaluation/metrics
+end note
+
+note right of Central
+  Προγραμματισμένη σύνδεση
+  και κοινή διαχείριση αιτημάτων
+end note
+
+@enduml
