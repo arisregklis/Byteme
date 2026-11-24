@@ -6,9 +6,6 @@ public class Args {
     public Args(String[] args) {
         this.args = args;
     }
-<<<<<<< HEAD
-}
-=======
 
     public String getString(String name, String defaultvalue) {
     for (int i = 0; i < args.length; i++) {
