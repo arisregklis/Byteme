@@ -7,10 +7,10 @@ package gr.aueb.byteme.common;
 //     Json body = new Json("{\"floor\": 7, \"type\": \"PICKUP\"}");
 //     body.getInt("floor");      // 7
 //     body.getString("type");    // PICKUP
-public class Json {
+public class JSON {
     private final String text;
 
-    public Json(String text) {
+    public JSON(String text) {
         if (text == null) {
             this.text = "";
         } else {
