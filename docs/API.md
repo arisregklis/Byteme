@@ -60,10 +60,28 @@
 
 Βασικές παράμετροι εκκίνησης:
 
-- Κεντρικό: `--port`.
-- Kiosk: `--floor`, `--port`, `--central-url`.
-- Ανελκυστήρας: `--id`, `--port`, `--eval-url`.
+- Κεντρικό: `--port`. -- florrs (3-200) starting with 10 , --elevators (2-20) starting with 3
+- Kiosk: `--floor`, `--port`, `--central-url`.--floors 
+- Ανελκυστήρας: `--id`, `--port`, `--eval-url` -- floors .
 - Αξιολόγηση: `--port`, `--central-url`.
+- Κεντρικό: --port, --floors (3–200, προεπ. 10), --elevators (2–20, προεπ. 3).
+CentralMain διαβάζει και ελέγχει και τα τρία
+A-02
+64
+- Kiosk: --floor, --port, --central-url.
+- Kiosk: --floor, --port, --central-url, --floors (προεπ. 10).
+KioskMain
+A-03
+65
+- Ανελκυστήρας: --id, --port, --eval-url.
+- Ανελκυστήρας: --id, --port, --eval-url, --floors (προεπ. 10).
+ElevatorMain
+A-04
+66
+- Αξιολόγηση: --port, --central-url.
+- Αξιολόγηση: --port, --central-url, --floors (προεπ. 10).
+
+To -floor πρέπει να είναι ίδιο σε όλα οπότε πρέπει να ελέγχεται σε ένα σημείο  **TODO**
 
 ### 0.4 Κωδικοί HTTP
 
@@ -95,10 +113,31 @@
 {
   "code": "INVALID_FLOOR",
   "message": "Floor must be between 0 and 49",
-  "request_id": "req-41",
   "timestamp": "2026-11-23T18:30:00Z"
 }
 ```
+
+#### Κωδικοί σφαλμάτων
+
+| `code` | HTTP | Σύστημα | Πότε |
+|---|---|---|---|
+| `MISSING_REQUEST_ID` | 400 | Κεντρικό | Κενό `request_id` |
+| `INVALID_FLOOR` | 400 | Κεντρικό | Όροφος εκτός 0..N-1 |
+| `SAME_FLOOR` | 400 | Κεντρικό | `source_floor == destination_floor` |
+| `INVALID_CALLBACK_URL` | 400 | Κεντρικό | Το `callback_url` δεν ξεκινά με `http://` |
+| `DUPLICATE_REQUEST` | 409 | Κεντρικό | Ίδιο `request_id` δεύτερη φορά |
+| `NO_ELEVATOR_AVAILABLE` | 503 | Κεντρικό | Κανένας διαθέσιμος ανελκυστήρας |
+| `UNKNOWN_REQUEST` | 404 | Kiosk | `POST /display` για άγνωστο `request_id` |
+| `INVALID_EVENT_TYPE` | 400 | Αξιολόγηση | `event_type` εκτός των 11 του §0.6 |
+| `INVALID_SCENARIO` | 400 | Αξιολόγηση | Άγνωστο `scenario` |
+| `SCENARIO_NOT_READY` | 400 | Αξιολόγηση | `morning_rush` / `evening_rush` (TODO) |
+| `INVALID_PASSENGERS` | 400 | Αξιολόγηση | `passengers` εκτός 1..1000 |
+| `UNKNOWN_RUN` | 404 | Αξιολόγηση | Άγνωστο `run_id` |
+| `BAD_REQUEST` | 400 | Όλα | Άκυρο JSON, πεδίο που λείπει, άκυρος όροφος/γράμμα στον ανελκυστήρα ή στο kiosk |
+| `CONFLICT` | 409 | Ανελκυστήρας | Εντολή που δεν επιτρέπεται στην τρέχουσα κατάσταση |
+| `NOT_FOUND` | 404 | Όλα | Άγνωστο endpoint |
+| `METHOD_NOT_ALLOWED` | 405 | Όλα | Λάθος HTTP method |
+| `INTERNAL_ERROR` | 500 | Όλα | Απρόβλεπτο σφάλμα |
 
 ### 0.6 Κοινές μεταβλητές
 
@@ -116,18 +155,22 @@
 |---|---|
 | `IDLE` | Ακίνητος και διαθέσιμος |
 | `MOVING` | Κινείται προς την επόμενη στάση |
-| `STOPPING` | Εκτελεί ασφαλή διακοπή |
+| `STOPPING` | Εκτελεί ασφαλή διακοπή | 
+**TO-DO** μέχρι στιμγής μόνο σταμαατάει
 | `STOPPED` | Σταμάτησε μετά από `POST /stop` |
 | `EMERGENCY` | Κατάσταση έκτακτης ανάγκης |
 | `OUT_OF_SERVICE` | Εκτός λειτουργίας λόγω βλάβης |
 
 Το `STOPPED` δεν σημαίνει φυσιολογικά ακίνητος. Για φυσιολογικά ακίνητο και διαθέσιμο ανελκυστήρα χρησιμοποιείται το `IDLE`.
 
+--Μέχρι 25/11  ο ανελκυστήρας στέλνει ASSIGNMENT_RECEIVED (σε POST /stops), STOPPED και RESUMED. 
+**TODO:** τα υπόλοιπα 8 έρχονται με την κίνηση. Η Αξιολόγηση δέχεται ήδη και τα 11.
 #### Κατάσταση θυρών
 
 | Τιμή `door_state` | Σημασία |
 |---|---|
 | `OPEN` | Οι θύρες είναι ανοιχτές |
+**TO-DO**
 | `OPENING` | Οι θύρες ανοίγουν |
 | `CLOSING` | Οι θύρες κλείνουν |
 | `CLOSED_AND_LOCKED` | Οι θύρες είναι κλειστές και ασφαλισμένες |
@@ -161,10 +204,11 @@
 - Κίνηση επιτρέπεται μόνο όταν το `door_state` είναι `CLOSED_AND_LOCKED`.
 - Κίνηση απαγορεύεται όταν `current_load_kg > max_load_kg`.
 - Κίνηση απαγορεύεται σε `STOPPED`, `EMERGENCY` ή `OUT_OF_SERVICE`.
-- Οι θύρες ανοίγουν μόνο όταν ο ανελκυστήρας είναι ακίνητος σε όροφο.
-- Αν το `door_state` είναι `BLOCKED`, οι θύρες ανοίγουν ξανά.
+- Οι θύρες ανοίγουν μόνο όταν ο ανελκυστήρας είναι ακίνητος σε όροφο. - **TODO:** δεν υπάρχει ακόμα έλεγχος 
+- Αν το `door_state` είναι `BLOCKED`, οι θύρες ανοίγουν ξανά. **TODO**
 - Το `POST /resume` δεν παρακάμπτει τους κανόνες ασφαλείας.
-- Σε άκυρη πληροφορία αισθητήρα, ο ανελκυστήρας θεωρείται μη ασφαλής για κίνηση.
+
+ --- Οι τρεις πρώτοι κανόνες υλοποιούνται στη μέθοδο canMove() του Elevator. -- 
 
 Οι παρακάτω συνθήκες πρέπει να ισχύουν πάντα:
 
@@ -188,12 +232,12 @@ status == EMERGENCY
 | Kiosk, Αξιολόγηση | Κεντρικό | `POST /requests` | `http://localhost:3000/requests` | §2.1 |
 | Αξιολόγηση | Κεντρικό | `GET /elevators` | `http://localhost:3000/elevators` | §2.2 |
 | Αξιολόγηση | Κεντρικό | `GET /config` | `http://localhost:3000/config` | §2.3 |
-| Αξιολόγηση | Κεντρικό | `PUT /config` | `http://localhost:3000/config` | §2.4 |
+| Αξιολόγηση | Κεντρικό | `PUT /config` | `http://localhost:3000/config` | §2.4  TODO |
 | Κεντρικό | Ανελκυστήρας | `GET /state` | `http://localhost:3003/state` | §3.1 |
 | Κεντρικό | Ανελκυστήρας | `POST /stops` | `http://localhost:3003/stops` | §3.2 |
 | Κεντρικό | Ανελκυστήρας | `POST /stop` | `http://localhost:3003/stop` | §3.3 |
 | Κεντρικό | Ανελκυστήρας | `POST /resume` | `http://localhost:3003/resume` | §3.4 |
-| Κεντρικό | Ανελκυστήρας | `PUT /config` | `http://localhost:3003/config` | §3.5 |
+| Κεντρικό | Ανελκυστήρας | `PUT /config` TODO | `http://localhost:3003/config` | §3.5 |
 | Κεντρικό | Kiosk | `POST /display` | `http://localhost:3100/display` | §4.2 |
 | Ανελκυστήρας | Αξιολόγηση | `POST /events` | `http://localhost:8300/events` | §5.1 |
 | Χρήστης ή CLI | Αξιολόγηση | `POST /runs` | `http://localhost:8300/runs` | §5.2 |
@@ -249,11 +293,11 @@ status == EMERGENCY
 
 1. Ο χρήστης εισάγει προορισμό στο Kiosk.
 2. Το Kiosk στέλνει `POST /requests`.
-3. Το Κεντρικό επιστρέφει `202 Accepted`.
-4. Το Κεντρικό καλεί `GET /state` στους ανελκυστήρες.
-5. Επιλέγει τον καταλληλότερο ανελκυστήρα.
-6. Στέλνει τις στάσεις μέσω `POST /stops`.
-7. Ενημερώνει το Kiosk μέσω `POST /display`.
+3. Το Κεντρικό ελέγχει το αίτημα (400 ή 409 αν είναι άκυρο)
+4. Καλεί GET /state στους ανελκυστήρες. 
+5. Επιλέγει τον καταλληλότερο ανελκυστήρα (503 αν κανένας)
+ 6. Επιστρέφει 202 Accepted.
+ 7. Στέλνει τις στάσεις μέσω POST /stops και ενημερώνει το Kiosk μέσω POST /display.
 8. Ο ανελκυστήρας εκτελεί τη διαδρομή.
 9. Ο ανελκυστήρας στέλνει γεγονότα μέσω `POST /events`.
 10. Η Αξιολόγηση υπολογίζει τα αποτελέσματα.
@@ -313,20 +357,20 @@ POST http://localhost:3000/requests
 ```
 
 Στη συνέχεια το Κεντρικό:
-
-1. Ελέγχει τους ορόφους.
-2. Ζητά την κατάσταση των ανελκυστήρων μέσω `GET /state`.
-3. Επιλέγει τον καταλληλότερο ανελκυστήρα.
-4. Στέλνει τις στάσεις μέσω `POST /stops`.
-5. Ενημερώνει το Kiosk μέσω `POST /display`.
+1. Ελέγχει request_id, ορόφους και callback_url (400 / 409) 
+2. Ζητά GET /state από όλους τους ανελκυστήρες. 
+3. Επιλέγει ανελκυστήρα (503 αν κανένας).  
+4. Απαντά 202 Accepted. 
+5. Στέλνει δύο POST /stops (PICKUP στο source_floor, DROPOFF στο destination_floor). 
+6. Αν υπάρχει callback_url, στέλνει POST /display.
 
 Πιθανά σφάλματα:
 
 | Κωδικός | Αιτία |
 |---:|---|
-| `400 Bad Request` | Άκυρο JSON, όροφος ή callback URL |
-| `409 Conflict` | Υπάρχει ήδη το ίδιο `request_id` |
-| `503 Service Unavailable` | Δεν υπάρχει διαθέσιμος ανελκυστήρας |
+| `400 Bad Request` | MISSING_REQUEST_ID, INVALID_FLOOR, SAME_FLOOR, INVALID_CALLBACK_URL, BAD_REQUEST (άκυρο JSON) |
+| `409 Conflict` | DUPLICATE_REQUEST: το request_id έχει ήδη πάρει 202. Μετά από 503 μπορεί να ξανασταλεί |
+| `503 Service Unavailable` | Δεν υπάρχει διαθέσιμος ανελκυστήρας  - NO_ELEVATOR_AVAILABLE|
 
 ### 2.2 `GET /elevators`
 
@@ -357,7 +401,7 @@ GET http://localhost:3000/elevators
 }
 ```
 
-Αν ένας ανελκυστήρας δεν απαντά, το Κεντρικό συνεχίζει με τους υπόλοιπους.
+Αν ένας ανελκυστήρας δεν απαντά σε 3 δευτερόλεπτα, εμφανίζεται με "error": "unreachable" και στην επιλογή ανελκυστήρα μετράει ως OUT_OF_SERVICE. Για κάθε ανελκυστήρα επιστρέφεται ολόκληρο το JSON του GET /state (§3.1)..
 
 ### 2.3 `GET /config`
 
@@ -379,7 +423,7 @@ GET http://localhost:3000/config
 }
 ```
 
-### 2.4 `PUT /config`
+### 2.4 `PUT /config` **TODO** 
 
 Αλλάζει τη διαμόρφωση του κτιρίου.
 
@@ -421,9 +465,9 @@ PUT http://localhost:3000/config
 
 - `GET /state`
 - `POST /stops`
-- `POST /stop`
-- `POST /resume`
-- `PUT /config`
+- `POST /stop` **todo** 
+- `POST /resume`**todo**
+- `PUT /config`**todo**
 - `POST /display`
 
 ---
@@ -557,7 +601,7 @@ POST http://localhost:3003/resume
 - Υπάρχει υπέρβαρο.
 - Υπάρχει emergency ή βλάβη.
 
-### 3.5 `PUT /config`
+### 3.5 `PUT /config` **TODO**
 
 Αλλάζει βασικές παραμέτρους λειτουργίας.
 
@@ -592,12 +636,12 @@ PUT http://localhost:3003/config
 
 ### 3.6 Κινητήρας και θύρες
 
-Στην αρχική έκδοση ο κινητήρας και οι θύρες υλοποιούνται ως Java interfaces:
+Στην αρχική έκδοση ο κινητήρας και οι θύρες υλοποιούνται ως Java interfaces: **TODO** RN 25/11  Οι θύρες ειναι BOOLEAN 
 
 - `Motor`
 - `Doors`
 
-Κάθε εντολή κίνησης πρέπει πρώτα να περνά από τους κανόνες ασφαλείας.
+Κάθε εντολή κίνησης πρέπει πρώτα να περνά από τo can.move
 
 ### 3.7 Επικοινωνία με την Αξιολόγηση
 
@@ -616,7 +660,7 @@ POST http://localhost:8300/events
 Παράδειγμα εκκίνησης:
 
 ```text
---floor 2 --port 3100 --central-url http://localhost:3000
+--floor 2 --port 3100 --central-url http://localhost:3000 --floor 10
 ```
 
 Το Kiosk:
@@ -635,7 +679,7 @@ POST http://localhost:8300/events
 
 ```json
 {
-  "request_id": "req-41",
+"request_id": "req-2-1",
   "source_floor": 2,
   "destination_floor": 8,
   "callback_url": "http://localhost:3100/display"
@@ -729,8 +773,7 @@ POST http://localhost:8300/events
 
 Αν ληφθεί ξανά το ίδιο `event_id`, δεν αποθηκεύεται δεύτερη φορά.
 
-Άκυρο event επιστρέφει `400 Bad Request`.
-
+Άκυρο event_type επιστρέφει 400 INVALID_EVENT_TYPE. Υποχρεωτικά πεδία: event_id, elevator_id, event_type.
 ### 5.2 `POST /runs`
 
 Ξεκινά ένα σενάριο αξιολόγησης.
@@ -747,15 +790,15 @@ POST http://localhost:8300/runs
 {
   "scenario": "uniform",
   "seed": 12345,
-  "passengers": 100
+  "passengers": 10
 }
 ```
 
 Επιτρεπτά σενάρια:
 
 - `uniform`
-- `morning_rush`
-- `evening_rush`
+- `morning_rush` **TODO**
+- `evening_rush`**TODO**
 
 Απάντηση `202 Accepted`:
 
@@ -786,12 +829,14 @@ GET http://localhost:8300/results/run-1
   "failed_requests": 0,
   "average_waiting_time_ms": 4200,
   "average_travel_time_ms": 8900
+  // not yet rn it shows 0 
 }
 ```
 
 Άγνωστο `run_id` επιστρέφει `404 Not Found`.
 
 ### 5.4 Βασικές μετρικές
+NOT YET **TODO**
 
 - Μέσος χρόνος αναμονής.
 - Μέσος χρόνος διαδρομής.
