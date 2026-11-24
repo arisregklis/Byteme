@@ -1,3 +1,4 @@
+// Το παρακάτω κομμάτι κώδικα γράφτηκε με τη χρήση εργαλείου ΠΤΝ (Claude, model: Opus 5.5 medium, tokens~4096)
 package gr.aueb.byteme.common;
 
 // Διάβασμα απλών, επίπεδων JSON (χωρίς εμφωλευμένα αντικείμενα) με indexOf/substring.
