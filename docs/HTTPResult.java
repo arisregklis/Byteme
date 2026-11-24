@@ -1,10 +1,10 @@
 package gr.aueb.byteme.common;
 
-public class HttpResult {
+public class HTTPResult {
     private final int status;
     private final String body;
 
-    public HttpResult(int status, String body) {
+    public HTTPResult(int status, String body) {
         this.status = status;
         this.body = body;
     }
@@ -13,7 +13,9 @@ public class HttpResult {
         return status;
     }
 
-    public Strinig getBody() {
+    public String getBody() {
         return body;
     }
+    
 }
+

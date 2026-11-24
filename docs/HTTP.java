@@ -19,7 +19,7 @@ import java.time.Instant;
 //     Http http = new Http();
 //     http.sendJson(exchange, 200, "{\"accepted\": true}");
 //     HttpResult answer = http.post("http://localhost:3000/requests", json);
-public class Http {
+public class HTTP {
     private static final String JSON_TYPE = "application/json; charset=UTF-8";
     private static final Duration TIMEOUT = Duration.ofSeconds(3);
 
@@ -62,9 +62,9 @@ public class Http {
         return text.replace('"', '\'');
     }
 
-    // ---------- client ----------
+    
 
-    public HttpResult get(String url) {
+    public HTTPResult get(String url) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .timeout(TIMEOUT)
                 .GET()
@@ -72,7 +72,7 @@ public class Http {
         return send(request, url);
     }
 
-    public HttpResult post(String url, String json) {
+    public HTTPResult post(String url, String json) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .timeout(TIMEOUT)
                 .header("Content-Type", JSON_TYPE)
@@ -82,12 +82,13 @@ public class Http {
     }
 
     // Αν το άλλο σύστημα είναι κλειστό ή δεν απαντά μέσα στο TIMEOUT -> "503"
-    private HttpResult send(HttpRequest request, String url) {
+    private HTTPResult send(HttpRequest request, String url) {
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return new HttpResult(response.statusCode(), response.body());
+            return new HTTPResult(response.statusCode(), response.body());
         } catch (Exception e) {
             throw new IllegalStateException("503: cannot reach " + url);
         }
     }
 }
+
