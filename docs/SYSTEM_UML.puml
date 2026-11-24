@@ -1,4 +1,5 @@
 @startuml
+!pragma layout smetana
 allowmixing
 
 title Σύστημα Έξυπνων Ανελκυστήρων\nΠαρούσα και προγραμματισμένη κατάσταση
